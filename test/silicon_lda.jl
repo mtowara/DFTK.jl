@@ -17,7 +17,7 @@ function run_silicon_lda(T ;Ecut=5, grid_size=15, spin_polarization=:none, kwarg
     ref_etot = -7.911817522631488
 
     fft_size = fill(grid_size, 3)
-    Si = ElementPsp(silicon.atnum, psp=load_psp(silicon.atnum, functional="lda", family="hgh"))
+    Si = ElementPsp(silicon.atnum, psp=load_psp("hgh/lda/si-q4"))
     model = model_DFT(Array{T}(silicon.lattice), [Si => silicon.positions], [:lda_x, :lda_c_vwn],
                       spin_polarization=spin_polarization)
     basis = PlaneWaveBasis(model, Ecut, silicon.kcoords, silicon.ksymops; fft_size=fft_size)

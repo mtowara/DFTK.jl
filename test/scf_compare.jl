@@ -78,7 +78,7 @@ end
     tol = 1e-7
 
     Si = ElementPsp(silicon.atnum, psp=load_psp(silicon.psp))
-    magnetic_moments = [Si => [1, 1]]
+    magnetic_moments = [1, 1]
     model = model_DFT(silicon.lattice, [Si => silicon.positions], [:lda_xc_teter93];
                       magnetic_moments=magnetic_moments)
     basis = PlaneWaveBasis(model, Ecut, silicon.kcoords, silicon.ksymops; fft_size=fft_size)
@@ -135,7 +135,7 @@ end
     tol = 1e-7
 
     Fe = ElementPsp(iron_bcc.atnum, psp=load_psp(iron_bcc.psp))
-    magnetic_moments = [Fe => [4.0]]
+    magnetic_moments = [4.0]
     model = model_LDA(iron_bcc.lattice, [Fe => iron_bcc.positions],
                       temperature=0.01, magnetic_moments=magnetic_moments,
                       spin_polarization=:collinear)

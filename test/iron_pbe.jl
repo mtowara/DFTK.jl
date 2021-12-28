@@ -48,7 +48,7 @@ function run_iron_pbe(T; kwargs...)
 
     # Produce reference data and guess for this configuration
     Fe = ElementPsp(iron_bcc.atnum, psp=load_psp("hgh/lda/Fe-q8.hgh"))
-    magnetic_moments = [Fe => [4.0]]
+    magnetic_moments = [4.0]
     model = model_PBE(Array{T}(iron_bcc.lattice), [Fe => iron_bcc.positions],
                       temperature=0.01, magnetic_moments=magnetic_moments)
     basis = PlaneWaveBasis(model; Ecut=20, fft_size=[20, 20, 20],

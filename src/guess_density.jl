@@ -29,7 +29,7 @@ When magnetic moments are provided, construct a symmetry-broken density guess.
 The magnetic moments should be specified in units of ``μ_B``.
 """
 function guess_density(basis::PlaneWaveBasis, magnetic_moments=[])
-    guess_density(basis, basis.model.oldatoms, magnetic_moments)
+    guess_density(basis, basis.model.atoms, magnetic_moments)
 end
 @timing function guess_density(basis::PlaneWaveBasis{T}, atoms, magnetic_moments) where {T}
     ρtot = _guess_total_density(basis, atoms)
@@ -43,9 +43,8 @@ end
 end
 
 function _guess_total_density(basis::PlaneWaveBasis{T}, atoms) where {T}
-    # build ρtot
-    gaussians_tot = [(T(n_elec_valence(spec)), T(atom_decay_length(spec)), pos)
-                     for (spec, positions) in atoms for pos in positions]
+    gaussians_tot = [(T(n_elec_valence(element)), T(atom_decay_length(element)), position)
+                     for (element, position) in atoms]
     ρtot = gaussian_superposition(basis, gaussians_tot)
 end
 
@@ -55,11 +54,10 @@ function _guess_spin_density(basis::PlaneWaveBasis{T}, atoms, magnetic_moments) 
         isempty(magnetic_moments) && return nothing
         error("Initial magnetic moments can only be used with collinear models.")
     end
+    magmoms = normalize_magnetic_moment.(magnetic_moments)
 
     # If no magnetic moments start with a zero spin density
-    all_magmoms = (normalize_magnetic_moment(magmom) for (_, magmoms) in magnetic_moments
-                   for magmom in magmoms)
-    if all(iszero, all_magmoms)
+    if all(iszero, magmoms)
         @warn("Returning zero spin density guess, because no initial magnetization has " *
               "been specified in any of the given elements / atoms. Your SCF will likely " *
               "not converge to a spin-broken solution.")
@@ -68,21 +66,16 @@ function _guess_spin_density(basis::PlaneWaveBasis{T}, atoms, magnetic_moments) 
 
     gaussians = Tuple{T, T, Vec3{T}}[]
     @assert length(magnetic_moments) == length(atoms)
-    for (ispec, (spec, magmoms)) in enumerate(magnetic_moments)
-        positions = atoms[ispec][2]
-        @assert charge_nuclear(spec) == charge_nuclear(atoms[ispec][1])
-        @assert length(magmoms) == length(positions)
-        for (ipos, r) in enumerate(positions)
-            magmom = Vec3{T}(normalize_magnetic_moment(magmoms[ipos]))
-            iszero(magmom) && continue
-            iszero(magmom[1:2]) || error("Non-collinear magnetization not yet implemented")
+    for ((element, position), magmom) in zip(atoms, magnetic_moments)
+        magmom = Vec3{T}(normalize_magnetic_moment(magmom))
+        iszero(magmom) && continue
+        iszero(magmom[1:2]) || error("Non-collinear magnetization not yet implemented")
 
-            magmom[3] ≤ n_elec_valence(spec) || error(
-                "Magnetic moment $(magmom[3]) too large for element $(chemical_symbol(spec)) " *
-                "with only $(n_elec_valence(spec)) valence electrons."
-            )
-            push!(gaussians, (magmom[3], atom_decay_length(spec), r))
-        end
+        magmom[3] ≤ n_elec_valence(element) || error(
+            "Magnetic moment $(magmom[3]) too large for element $(chemical_symbol(element)) " *
+            "with only $(n_elec_valence(element)) valence electrons."
+        )
+        push!(gaussians, (magmom[3], atom_decay_length(element), position))
     end
     gaussian_superposition(basis, gaussians)
 end

@@ -22,7 +22,7 @@ function test_chi0(;symmetry=false, use_symmetry=false, temperature=0,
     ]
     @testset "Computing χ0 ($(join(label, ", ")))" begin
         spec = ElementPsp(testcase.atnum, psp=load_psp(testcase.psp))
-        magnetic_moments = collinear ? [spec => 2rand(2)] : []
+        magnetic_moments = collinear ? 2rand(2) : []
         model_kwargs = (temperature=temperature, symmetries=symmetry,
                         magnetic_moments=magnetic_moments,
                         spin_polarization=spin_polarization)

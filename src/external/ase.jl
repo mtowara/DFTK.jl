@@ -37,9 +37,10 @@ end
 function load_magnetic_moments_ase(pyobj::PyObject)
     @assert pyisinstance(pyobj, pyimport("ase").Atoms)
     magmoms = pyobj.get_initial_magnetic_moments()
-    map(ase_atoms_translation_map(pyobj)) do (symbol, atom_indices)
+    newmoms = map(ase_atoms_translation_map(pyobj)) do (symbol, atom_indices)
         ElementCoulomb(symbol) => [magmoms[i] for i in atom_indices]
     end
+    last(oldatoms_from_new(load_atoms_ase(T, pyobj), newmoms))
 end
 
 
@@ -72,6 +73,7 @@ function ase_atoms(lattice_or_model, atoms, magnetic_moments=nothing)
 
     magmoms = nothing
     if !isnothing(magnetic_moments)
+        magnetic_moments = last(oldatoms_from_new(atoms, magnetic_moments))
         @assert length(magnetic_moments) == length(atoms)
         for (elem, magmom) in magnetic_moments
             @assert all(m -> m isa Number, magmom)

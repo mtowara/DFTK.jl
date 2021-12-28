@@ -34,7 +34,7 @@ function run_iron_lda(T; kwargs...)
     ref_etot = -16.670871429685356
 
     Fe = ElementPsp(iron_bcc.atnum, psp=load_psp(iron_bcc.psp))
-    magnetic_moments = [Fe => [4.0]]
+    magnetic_moments = [4.0]
     model = model_LDA(Array{T}(iron_bcc.lattice), [Fe => iron_bcc.positions],
                       temperature=0.01, magnetic_moments=magnetic_moments)
     basis = PlaneWaveBasis(model; Ecut=15, fft_size=[20, 20, 20],

@@ -80,13 +80,8 @@ oldatoms_from_new(at) = first(oldatoms_from_new(at, at))
 
 old_to_new(atoms::AtomsType) = atoms
 function old_to_new(atoms::AbstractVector)
-    newatoms = []
-    for (el, positions) in atoms, pos in positions
-        push!(newatoms, el => pos)
-    end
-    Vector(newatoms)
+    [el => pos for (el, positions) in atoms for pos in positions]
 end
-
 # end for compatibility
 
 
@@ -123,7 +118,7 @@ function Model(lattice::AbstractMatrix{T};
                model_name="custom",
                system=nothing,
                n_electrons=nothing,
-               atoms::AtomsType=[],
+               atoms::AtomsType=Pair{Any,Vector{Float64}}[],
                magnetic_moments=[],
                terms=[Kinetic()],
                temperature=T(0.0),

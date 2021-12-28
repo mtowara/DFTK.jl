@@ -77,7 +77,7 @@ end
 @testset "Forces on spin-polarised case" begin
     function oxygen_energy_forces(pos)
         O = ElementPsp(o2molecule.atnum, psp=load_psp("hgh/pbe/O-q6.hgh"))
-        magnetic_moments = [O => [1.0, 1.0]]
+        magnetic_moments = [1.0, 1.0]
         model = model_PBE(diagm([7.0, 7.0, 7.0]), [O => pos],
                           temperature=0.02, smearing=smearing=Smearing.Gaussian(),
                           magnetic_moments=magnetic_moments)

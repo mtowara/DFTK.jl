@@ -15,11 +15,11 @@ function test_kernel(spin_polarization, termtype; test_compute=true)
         magnetic_moments = []
         n_spin = 1
         if spin_polarization == :collinear
-            magnetic_moments = [spec => 2rand(2)]
+            magnetic_moments = 2rand(2)
             n_spin = 2
         end
 
-        model = Model(testcase.lattice; atoms=[spec => testcase.positions],
+        model = Model(testcase.lattice; atoms=[spec => pos for pos in testcase.positions],
                       terms=[termtype], magnetic_moments=magnetic_moments,
                       spin_polarization=spin_polarization)
         @test model.n_spin_components == n_spin
@@ -59,13 +59,13 @@ function test_kernel_collinear_vs_noncollinear(termtype)
     xcsym = (termtype isa Xc) ? join(string.(termtype.functionals), " ") : ""
     @testset "Kernel $(typeof(termtype)) $xcsym (coll == noncoll)" begin
         spec = ElementPsp(testcase.atnum, psp=load_psp(testcase.psp))
-        model = Model(testcase.lattice; atoms=[spec => testcase.positions],
-                      terms=[termtype])
+        atoms = [spec => pos for pos in testcase.positions]
+        model = Model(testcase.lattice; atoms=atoms, terms=[termtype])
         basis = PlaneWaveBasis(model; Ecut, kgrid)
         term  = only(basis.terms)
 
-        model_col = Model(testcase.lattice; atoms=[spec => testcase.positions],
-                          terms=[termtype], spin_polarization=:collinear)
+        model_col = Model(testcase.lattice; atoms=atoms, terms=[termtype],
+                          spin_polarization=:collinear)
         basis_col = PlaneWaveBasis(model_col; Ecut, kgrid)
         term_col  = only(basis_col.terms)
 

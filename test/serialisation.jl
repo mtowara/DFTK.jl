@@ -38,7 +38,7 @@ end
 
 @testset "Test checkpointing" begin
     O = ElementPsp(o2molecule.atnum, psp=load_psp("hgh/pbe/O-q6.hgh"))
-    magnetic_moments = [O => [1., 1.]]
+    magnetic_moments = [1., 1.]
     model = model_PBE(o2molecule.lattice, [O => o2molecule.positions],
                       temperature=0.02, smearing=smearing=Smearing.Gaussian(),
                       magnetic_moments=magnetic_moments, symmetries=false)

@@ -33,11 +33,7 @@ if !ispynull(ase)
         @test atoms[1][2][2] ≈ [1/3, 2/3, 1/2] atol=1e-5
 
         magnetic_moments = load_magnetic_moments(py"atoms")
-        @test length(magnetic_moments) == 1
-        @test all(at isa ElementCoulomb for (at, magmoms) in magnetic_moments)
-        @test magnetic_moments[1][1].symbol == :Mg
-        @test magnetic_moments[1][2][1] == 1.0
-        @test magnetic_moments[1][2][2] == 2.0
+        @test magnetic_moments == [1.0, 2.0]
 
         newatoms = ase_atoms(lattice, atoms, magnetic_moments)
         @test all(py"$newatoms.cell == atoms.cell")

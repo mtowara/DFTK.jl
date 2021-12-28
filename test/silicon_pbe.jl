@@ -21,7 +21,7 @@ function run_silicon_pbe(T ;Ecut=5, grid_size=15, spin_polarization=:none, kwarg
     ref_etot = -7.854477356672080
 
     fft_size = fill(grid_size, 3)
-    Si = ElementPsp(silicon.atnum, psp=load_psp(silicon.atnum, functional="pbe", family="hgh"))
+    Si = ElementPsp(silicon.atnum, psp=load_psp("hgh/pbe/si-q4"))
     model = model_DFT(Array{T}(silicon.lattice), [Si => silicon.positions], [:gga_x_pbe, :gga_c_pbe],
                       spin_polarization=spin_polarization)
     basis = PlaneWaveBasis(model, Ecut, silicon.kcoords, silicon.ksymops; fft_size=fft_size)
