@@ -56,7 +56,6 @@ or an element name (e.g. `"silicon"`)
 """
 ElementCoulomb(key) = ElementCoulomb(periodic_table[key].number, Symbol(periodic_table[key].symbol))
 
-
 function local_potential_fourier(el::ElementCoulomb, q::T) where {T <: Real}
     q == 0 && return zero(T)  # Compensating charge background
     # General atom => Use default Coulomb potential
@@ -155,6 +154,7 @@ function ElementCohenBergstresser(key; lattice_constant=nothing)
 
     ElementCohenBergstresser(periodic_table[key].number, symbol, V_sym, lattice_constant)
 end
+
 
 function local_potential_fourier(el::ElementCohenBergstresser, q::T) where {T <: Real}
     q == 0 && return zero(T)  # Compensating charge background

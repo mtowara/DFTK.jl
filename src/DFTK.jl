@@ -4,12 +4,13 @@ with plane-wave density-functional theory algorithms.
 """
 module DFTK
 
-using Printf
-using Markdown
+using AtomsBase
 using LinearAlgebra
+using Markdown
+using Printf
 using Requires
-using TimerOutputs
 using spglib_jll
+using TimerOutputs
 using Unitful
 using UnitfulAtomic
 
@@ -139,13 +140,12 @@ export kgrid_from_minimal_spacing, kgrid_from_minimal_n_kpoints
 include("symmetry.jl")
 include("bzmesh.jl")
 
-export guess_density
-export random_density
-export load_psp
-export list_psp
+export guess_density, random_density
+export load_psp, list_psp, attach_psp
 include("guess_density.jl")
 include("pseudo/load_psp.jl")
 include("pseudo/list_psp.jl")
+include("pseudo/attach_psp.jl")
 
 export pymatgen_structure
 export ase_atoms
