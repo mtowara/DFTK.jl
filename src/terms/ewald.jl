@@ -25,7 +25,7 @@ end
 
 @timing "forces: Ewald" function compute_forces(term::TermEwald, ψ, occ; kwargs...)
     T = eltype(term.basis)
-    atoms = term.basis.model.atoms
+    atoms = term.basis.model.oldatoms
     # TODO this could be precomputed
     # Compute forces in the "flat" representation used by ewald
     forces_ewald = zeros(Vec3{T}, sum(length(positions) for (elem, positions) in atoms))
@@ -44,8 +44,8 @@ end
 end
 
 function energy_ewald(model::Model; kwargs...)
-    charges   = [charge_ionic(elem) for (elem, positions) in model.atoms for pos in positions]
-    positions = [pos for (_, positions) in model.atoms for pos in positions]
+    charges   = [charge_ionic(elem) for (elem, positions) in model.oldatoms for pos in positions]
+    positions = [pos for (_, positions) in model.oldatoms for pos in positions]
     isempty(charges) && return zero(eltype(model.lattice))
 
     # DFTK currently assumes that the compensating charge in the electronic and nuclear

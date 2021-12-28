@@ -30,7 +30,7 @@ function write_w90_win(fileprefix::String, basis::PlaneWaveBasis; bands_plot=fal
         println(fp, "end unit_cell_cart \n")
 
         println(fp, "begin atoms_frac")
-        for (element, positions) in basis.model.atoms
+        for (element, positions) in basis.model.oldatoms
             for position in positions
                 @printf fp "%-2s %10.6f %10.6f %10.6f \n" element.symbol position...
             end

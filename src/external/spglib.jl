@@ -186,7 +186,7 @@ function get_spglib_lattice(model; to_primitive=false)
     #      https://github.com/JuliaMolSim/DFTK.jl/pull/496/files#r725203554
     #      Essentially this does not influence the standardisation,
     #      but it only influences the kpath.
-    spg_positions, spg_numbers, _ = spglib_atoms(model.atoms)
+    spg_positions, spg_numbers, _ = spglib_atoms(model.oldatoms)
     structure = Spglib.Cell(model.lattice, spg_positions, spg_numbers)
     Matrix(Spglib.standardize_cell(structure, to_primitive=to_primitive).lattice)
 end
@@ -196,7 +196,7 @@ function spglib_spacegroup_number(model)
     # Get spacegroup number according to International Tables for Crystallography (ITA)
     # TODO Time-reversal symmetry disabled? (not yet available in DFTK)
     # TODO Are magnetic moments passed?
-    spg_positions, spg_numbers, _ = spglib_atoms(model.atoms)
+    spg_positions, spg_numbers, _ = spglib_atoms(model.oldatoms)
     structure = Spglib.Cell(model.lattice, spg_positions, spg_numbers)
     spacegroup_number = Spglib.get_spacegroup_number(structure)
     spacegroup_number

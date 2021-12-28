@@ -29,7 +29,7 @@ When magnetic moments are provided, construct a symmetry-broken density guess.
 The magnetic moments should be specified in units of ``μ_B``.
 """
 function guess_density(basis::PlaneWaveBasis, magnetic_moments=[])
-    guess_density(basis, basis.model.atoms, magnetic_moments)
+    guess_density(basis, basis.model.oldatoms, magnetic_moments)
 end
 @timing function guess_density(basis::PlaneWaveBasis{T}, atoms, magnetic_moments) where {T}
     ρtot = _guess_total_density(basis, atoms)

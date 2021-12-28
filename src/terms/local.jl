@@ -81,7 +81,7 @@ function (E::AtomicLocal)(basis::PlaneWaveBasis{T}) where {T}
     pot_fourier = zeros(Complex{T}, basis.fft_size)
     for (iG, G) in enumerate(G_vectors(basis))
         pot = zero(T)
-        for (elem, positions) in model.atoms
+        for (elem, positions) in model.oldatoms
             form_factor::T = local_potential_fourier(elem, norm(model.recip_lattice * G))
             for r in positions
                 pot += cis(-2T(π) * dot(G, r)) * form_factor
@@ -96,7 +96,7 @@ end
 
 @timing "forces: local" function compute_forces(term::TermAtomicLocal, ψ, occ; ρ, kwargs...)
     T = eltype(term.basis)
-    atoms = term.basis.model.atoms
+    atoms = term.basis.model.oldatoms
     recip_lattice = term.basis.model.recip_lattice
     unit_cell_volume = term.basis.model.unit_cell_volume
     ρ_fourier = r_to_G(term.basis, total_density(ρ))

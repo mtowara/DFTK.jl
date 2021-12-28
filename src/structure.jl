@@ -59,4 +59,4 @@ function chemical_formula(atoms)
     end
     formula
 end
-chemical_formula(model::Model) = chemical_formula(model.atoms)
+chemical_formula(model::Model) = chemical_formula(model.oldatoms)

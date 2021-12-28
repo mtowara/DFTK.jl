@@ -6,7 +6,7 @@ struct AtomicNonlocal end
 function (::AtomicNonlocal)(basis::PlaneWaveBasis)
     # keep only pseudopotential atoms
     atoms = [elem.psp => positions
-             for (elem, positions) in basis.model.atoms
+             for (elem, positions) in basis.model.oldatoms
              if elem isa ElementPsp]
 
     isempty(atoms) && return NoopTerm(basis)
@@ -42,7 +42,7 @@ end
 @timing "forces: nonlocal" function compute_forces(term::TermAtomicNonlocal, ψ, occ; kwargs...)
     basis = term.basis
     T = eltype(basis)
-    atoms = basis.model.atoms
+    atoms = basis.model.oldatoms
     unit_cell_volume = basis.model.unit_cell_volume
 
     # early return if no pseudopotential atoms

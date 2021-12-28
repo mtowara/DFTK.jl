@@ -30,7 +30,7 @@ function pymatgen_structure(model_or_lattice, atoms)
     Structure = pyimport("pymatgen.core.structure").Structure
     Structure(pylattice, pyspecies, pypositions)
 end
-pymatgen_structure(model::Model) = pymatgen_structure(model, model.atoms)
+pymatgen_structure(model::Model) = pymatgen_structure(model, model.oldatoms)
 
 
 function load_lattice_pymatgen(T, pyobj::PyObject)

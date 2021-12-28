@@ -2,6 +2,7 @@ using DFTK
 using AtomsBase
 using Unitful
 using UnitfulAtomic
+using PyCall
 
 # Super clunky ASE parser that should go to a separate package
 function load_system(file::AbstractString)
@@ -25,12 +26,15 @@ end
 #
 # AtomsBase from data
 #
+# (a) construct AtomsBase system
 a = 10.26u"bohr"  # Silicon lattice constant
 lattice = a / 2 * [[0, 1, 1.],  # Lattice as vector of vectors
                    [1, 0, 1.],
                    [1, 1, 0.]]
 atoms  = [:Si => ones(3)/8, :Si => -ones(3)/8]
 system = periodic_system(atoms, lattice; fractional=true)
+
+# (b) Use inside DFTK
 system = attach_psp(system; family="hgh", functional="lda")
 kin_1  = Model(system; terms=[Kinetic()])  # low-level interface
 lda_1  = model_LDA(system)                 # high-level interface
@@ -44,18 +48,13 @@ kin_2  = Model(system; terms=[Kinetic()])  # low-level interface
 lda_2  = model_LDA(system)                 # high-level interface
 
 #
-# Model( ) constructor from data
+# DFTK constructor from data
 #
 a = 10.26     # Silicon lattice constant (in Bohr)
 lattice = a / 2 * [[0 1 1.];
                    [1 0 1.];
                    [1 1 0.]]
-Si = ElementPsp(:Si, psp=load_psp("hgh/lda/si-q4.hgh"))
-atomic_potentials  = [Si => ones(3)/8, Si => -ones(3)/8]
-kin_3 = Model(lattice; atomic_potentials, terms=[Kinetic(), AtomicLocal()])
-
-# TODO Still support this:
-model_LDA(lattice, atomic_potentials)
-
-# better to rename atomic_potentials => atoms
-#                  atoms => oldatoms
+Si    = ElementPsp(:Si, psp=load_psp("hgh/lda/si-q4.hgh"))
+atoms = [Si => ones(3)/8, Si => -ones(3)/8]
+kin_3 = Model(lattice; atoms, terms=[Kinetic()])
+lda_3 = model_LDA(lattice, atoms)

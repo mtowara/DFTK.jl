@@ -38,17 +38,16 @@ struct Model{T <: Real}
     temperature::T
     smearing::Smearing.SmearingFunction # see Smearing.jl for choices
 
-    # Vector of pairs atomic potential => Vec3 (position, fractional coordinates)
-    # Possibly empty. `atomic_potentials` just contains this information. It's up to
-    # the `term_types` to make use of this (or not).
-    atomic_potentials::Vector{Pair{Any, Vec3{T}}}
+    # Vector of Pairs Element => Vec3 (positions, fractional coordinates)
+    # Possibly empty. `atoms` just contain the information on the atoms, it's up to
+    # the `terms` to make use of it (or not)
+    atoms::Vector{Pair{Any, Vec3{T}}}
 
     # Groups of identical atomic potentials (to speed up term instantiation)
     potential_groups::Vector{Vector{Int}}
 
-    # Deprecated field, contained for compatibility. Will be dropped in favour
-    # of `atomic_potentials`.
-    atoms::Vector{Pair{Any, Vector{Vec3{T}}}}
+    # Deprecated field, contained for compatibility. Will be dropped in favour of `atoms`.
+    oldatoms::Vector{Pair{Any, Vector{Vec3{T}}}}
 
     # each element t must implement t(basis), which instantiates a
     # term in a given basis and gives back a term (<: Term)
@@ -59,14 +58,36 @@ struct Model{T <: Real}
     symmetries::Vector{SymOp}
 end
 
+# TODO To ensure code breaks if "old" atoms are used
+AtomsType = AbstractVector{<:Pair{<:Any,<:AbstractVector{<:Real}}}
+
+# TODO For compatibility (because I can't be bothered to change everything right now)
+function oldatoms_from_new(atomic_potentials, payload)
+    potentials = first.(atomic_potentials)
+    potential_groups = [findall(Ref(pot) .== potentials) for pot in Set(potentials)]
+    new_potentials = [
+        first(atomic_potentials[first(group)]) => last.(atomic_potentials[group])
+         for group in potential_groups
+    ]
+    isempty(payload) && return new_potentials, payload
+
+    new_payload = [first(atomic_potentials[first(group)]) => payload[group]
+                   for group in potential_groups]
+
+    new_potentials, new_payload
+end
+oldatoms_from_new(at) = first(oldatoms_from_new(at, at))
+# end for compatibility
+
+
 """
-    Model(lattice; n_electrons, atomic_potentials, magnetic_moments, terms,
+    Model(lattice; n_electrons, atoms, magnetic_moments, terms,
                    temperature, smearing, spin_polarization, symmetry)
 
 Creates the physical specification of a model (without any
 discretization information).
 
-`n_electrons` is taken from `atomic_potentials` if not specified
+`n_electrons` is taken from `atoms` if not specified
 
 `spin_polarization` is :none by default (paired electrons)
 unless any of the elements has a non-zero initial magnetic moment.
@@ -81,7 +102,7 @@ The `symmetries` kwarg allows (a) to pass `true` / `false` to enable / disable
 the automatic determination of lattice symmetries or (b) to pass an explicit list
 of symmetry operations to use for lowering the computational effort.
 The default behaviour is equal to `true`, namely that the code checks the
-specified model in form of the Hamiltonian `terms`, `lattice`, `atomic_potentials` and
+specified model in form of the Hamiltonian `terms`, `lattice`, `atoms` and
 `magnetic_moments` parameters and from these automatically determines a set of symmetries
 it can safely use. If you want to pass custom symmetry operations (e.g. a reduced or
 extended set) use the `symmetry_operations` function. Notice that this may lead to wrong
@@ -92,33 +113,29 @@ function Model(lattice::AbstractMatrix{T};
                model_name="custom",
                system=nothing,
                n_electrons=nothing,
-               atomic_potentials=[],
+               atoms::AtomsType=[],
                magnetic_moments=[],
                terms=[Kinetic()],
                temperature=T(0.0),
                smearing=nothing,
-               spin_polarization=default_spin_polarization(last(atoms_from_potentials(atomic_potentials, magnetic_moments))),
-               symmetries=default_symmetries(lattice, atoms_from_potentials(atomic_potentials), last(atoms_from_potentials(atomic_potentials, magnetic_moments)), terms, spin_polarization),
+               spin_polarization=default_spin_polarization(magnetic_moments),
+               symmetries=default_symmetries(lattice, atoms, magnetic_moments,
+                                             spin_polarization, terms),
                ) where {T <: Real}
     lattice = Mat3{T}(lattice)
     temperature = T(austrip(temperature))
 
     if isnothing(n_electrons)
         # Get it from the atomic potentials, assuming charge-neutral cell
-        isempty(atomic_potentials) && error(
-            "Either n_electrons or a non-empty atomic_potentials should be provided."
+        isempty(atoms) && error(
+            "Either n_electrons or a non-empty atoms should be provided."
         )
-        n_electrons = sum(n_elec_valence(potential) for (potential, _) in atomic_potentials)
+        n_electrons = sum(n_elec_valence(potential) for (potential, _) in atoms)
     else
         @assert n_electrons isa Int
     end
     isempty(terms) && error("Model without terms not supported.")
-
-    if isnothing(system)
-        system = periodic_system([], collect(eachcol(lattice)))
-    elseif !all(periodicity(system))
-        error("DFTK only supports calculations with periodic boundary conditions.")
-    end
+    isnothing(system) && (system = periodic_system(Atom[], collect(eachcol(lattice)) * u"bohr"))
 
     # Special handling of 1D and 2D systems, and sanity checks
     n_dim = count(!iszero, eachcol(lattice))
@@ -155,31 +172,73 @@ function Model(lattice::AbstractMatrix{T};
 
     # Determine symmetry operations to use
     symmetries == true  && (symmetries = default_symmetries(lattice, atoms, magnetic_moments,
-                                                            terms, spin_polarization))
+                                                            spin_polarization, terms))
     symmetries == false && (symmetries = [identity_symop()])
     @assert !isempty(symmetries)  # Identity has to be always present.
 
     # Determine the groups of unique atomic potentials
-    potentials = first.(atomic_potentials)
+    potentials = first.(atoms)
     potential_groups = [Ref(pot) .== potentials for pot in Set(potentials)]
 
     Model{T}(model_name, system, lattice, recip_lattice, unit_cell_volume, recip_cell_volume,
              n_dim, n_electrons, spin_polarization, n_spin, T(temperature), smearing,
-             atomic_potentials, potential_groups, atoms_from_potentials(atomic_potentials), terms, symmetries)
+             atoms, potential_groups, oldatoms_from_new(atoms), terms, symmetries)
 end
 Model(lattice::AbstractMatrix{T}; kwargs...) where {T <: Integer}  = Model(Float64.(lattice); kwargs...)
 Model(lattice::AbstractMatrix{Q}; kwargs...) where {Q <: Quantity} = Model(austrip.(lattice); kwargs...)
-function Model(lattice::AbstractVector{<:AbstractVector{T}}; kwargs...) where {T <: Real}
-    mtx = zeros(T, 3, 3)
-    mtx[1:length(lattice), 1:length(lattice)] = hcat(lattice...)
-    Model(mtx; kwargs...)
+
+function Model(system::AbstractSystem; kwargs...)
+    @assert !(:system in keys(kwargs))
+    @assert !(:atoms  in keys(kwargs))
+    parsed = parse_system(system)
+    Model(parsed.lattice; atoms=parsed.atoms, parsed.kwargs..., kwargs...)
 end
 
-# TODO Docstring
-function Model(system::AbstractSystem{D}; kwargs...) where {D}
-    @assert !(:system            in keys(kwargs))
-    @assert !(:atomic_potentials in keys(kwargs))
 
+normalize_magnetic_moment(::Nothing)  = Vec3{Float64}(zeros(3))
+normalize_magnetic_moment(mm::Number) = Vec3{Float64}(0, 0, mm)
+normalize_magnetic_moment(mm::AbstractVector) = Vec3{Float64}(mm)
+
+"""
+:none if no element has a magnetic moment, else :collinear or :full
+"""
+function default_spin_polarization(magnetic_moments)
+    isempty(magnetic_moments) && return :none
+    all_magmoms = normalize_magnetic_moment.(magnetic_moments)
+    all(iszero, all_magmoms) && return :none
+    all(iszero(magmom[1:2]) for magmom in all_magmoms) && return :collinear
+
+    :full
+end
+
+"""
+Default logic to determine the symmetry operations to be used in the model.
+"""
+function default_symmetries(lattice, atoms, magnetic_moments, spin_polarization, terms;
+                            tol_symmetry=1e-5)
+    dimension = count(!iszero, eachcol(lattice))
+    if spin_polarization == :full || dimension != 3
+        return [identity_symop()]  # Symmetry not supported in spglib
+    elseif spin_polarization == :collinear && isempty(magnetic_moments)
+        # Spin-breaking due to initial magnetic moments cannot be determined
+        return [identity_symop()]
+    elseif any(breaks_symmetries, terms)
+        return [identity_symop()]  # Terms break symmetry
+    else
+        magmoms = normalize_magnetic_moment.(magnetic_moments)
+        oldatoms, oldmagmoms = oldatoms_from_new(atoms, magmoms)
+        return symmetry_operations(lattice, oldatoms, oldmagmoms,
+                                   tol_symmetry=tol_symmetry)
+    end
+end
+
+
+function parse_system(system::AbstractSystem{D}) where {D}
+    if !all(periodicity(system))
+        error("DFTK only supports calculations with periodic boundary conditions.")
+    end
+
+    # Parse abstract system and return data required to construct model
     mtx = austrip.(hcat(bounding_box(system)...))
     T = eltype(mtx)
     lattice = zeros(T, 3, 3)
@@ -188,7 +247,7 @@ function Model(system::AbstractSystem{D}; kwargs...) where {D}
     # Cache for instantiated pseudopotentials
     # (such that the respective objects are indistinguishable)
     cached_pseudos = Dict{String,Any}()
-    atomic_potentials = map(system) do atom
+    atoms = map(system) do atom
         if hasproperty(atom, :potential)
             potential = atom.potential
         elseif hasproperty(atom, :pseudopotential)
@@ -212,52 +271,13 @@ function Model(system::AbstractSystem{D}; kwargs...) where {D}
     end
     if all(m -> isnothing(m) || iszero(m) || isempty(m), magnetic_moments)
         empty!(magnetic_moments)
+    else
+        magnetic_moments = normalize_magnetic_moment.(magnetic_moments)
     end
 
     # TODO Use system to determine n_electrons
 
-    Model(lattice; system, atomic_potentials, magnetic_moments, kwargs...)
-end
-
-
-normalize_magnetic_moment(::Nothing)  = Vec3{Float64}(zeros(3))
-normalize_magnetic_moment(mm::Number) = Vec3{Float64}(0, 0, mm)
-normalize_magnetic_moment(mm::AbstractVector) = Vec3{Float64}(mm)
-
-"""
-:none if no element has a magnetic moment, else :collinear or :full
-"""
-function default_spin_polarization(magnetic_moments)
-    isempty(magnetic_moments) && return :none
-    all_magmoms = (normalize_magnetic_moment(magmom)
-                   for (_, magmoms) in magnetic_moments
-                   for magmom in magmoms)
-
-    all(iszero, all_magmoms) && return :none
-    all(iszero(magmom[1:2]) for magmom in all_magmoms) && return :collinear
-
-    :full
-end
-
-"""
-Default logic to determine the symmetry operations to be used in the model.
-"""
-function default_symmetries(lattice, atoms, magnetic_moments, terms, spin_polarization;
-                        tol_symmetry=1e-5)
-    dimension = count(!iszero, eachcol(lattice))
-    if spin_polarization == :full || dimension != 3
-        return [identity_symop()]  # Symmetry not supported in spglib
-    elseif spin_polarization == :collinear && isempty(magnetic_moments)
-        # Spin-breaking due to initial magnetic moments cannot be determined
-        return [identity_symop()]
-    elseif any(breaks_symmetries, terms)
-        return [identity_symop()]  # Terms break symmetry
-    else
-        magnetic_moments = [el => normalize_magnetic_moment.(magmoms)
-                            for (el, magmoms) in magnetic_moments]
-        return symmetry_operations(lattice, atoms, magnetic_moments,
-                                   tol_symmetry=tol_symmetry)
-    end
+    (; lattice, atoms, kwargs=(; system, magnetic_moments))
 end
 
 
@@ -288,21 +308,3 @@ spin_components(model::Model) = spin_components(model.spin_polarization)
 
 
 _is_well_conditioned(A; tol=1e5) = (cond(A) <= tol)
-
-
-# TODO For compatibility
-function atoms_from_potentials(atomic_potentials, payload)
-    potentials = first.(atomic_potentials)
-    potential_groups = [findall(Ref(pot) .== potentials) for pot in Set(potentials)]
-    new_potentials = [
-        first(atomic_potentials[first(group)]) => last.(atomic_potentials[group])
-         for group in potential_groups
-    ]
-    isempty(payload) && return new_potentials, payload
-
-    new_payload = [first(atomic_potentials[first(group)]) => payload[group]
-                   for group in potential_groups]
-
-    new_potentials, new_payload
-end
-atoms_from_potentials(at) = first(atoms_from_potentials(at, at))

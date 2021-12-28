@@ -85,5 +85,5 @@ function ase_atoms(lattice_or_model, atoms, magnetic_moments=nothing)
                           magmoms=magmoms)
 end
 function ase_atoms(model::Model, magnetic_moments=nothing)
-    ase_atoms(model.lattice, model.atoms, magnetic_moments)
+    ase_atoms(model.lattice, model.oldatoms, magnetic_moments)
 end

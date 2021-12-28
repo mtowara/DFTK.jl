@@ -18,10 +18,10 @@ function Base.show(io::IO, ::MIME"text/plain", model::Model)
     end
     showfieldln(io, "unit cell volume", @sprintf "%.5g Bohr³" model.unit_cell_volume)
 
-    if !isempty(model.atoms)
+    if !isempty(model.oldatoms)
         println(io)
         showfieldln(io, "atoms", chemical_formula(model))
-        elements = first.(model.atoms)
+        elements = first.(model.oldatoms)
         for (i, el) in enumerate(elements)
             header = i==1 ? "atom potentials" : ""
             showfieldln(io, header, el)

@@ -10,7 +10,7 @@ struct TermPspCorrection <: Term
 end
 function TermPspCorrection(basis::PlaneWaveBasis)
     model = basis.model
-    if model.n_dim != 3 && any(attype isa ElementPsp for (attype, _) in model.atoms)
+    if model.n_dim != 3 && any(attype isa ElementPsp for (attype, _) in model.oldatoms)
         error("The use of pseudopotentials is only sensible for 3D systems.")
     end
 
@@ -27,7 +27,7 @@ end
 Compute the correction term for properly modelling the interaction of the pseudopotential
 core with the compensating background charge induced by the `Ewald` term.
 """
-energy_psp_correction(model::Model) = energy_psp_correction(model.lattice, model.atoms)
+energy_psp_correction(model::Model) = energy_psp_correction(model.lattice, model.oldatoms)
 function energy_psp_correction(lattice, atoms)
     T = eltype(lattice)
 

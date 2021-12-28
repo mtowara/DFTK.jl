@@ -5,60 +5,60 @@
 Convenience constructor, which builds a standard atomic (kinetic + atomic potential) model.
 Use `extra_terms` to add additional terms.
 """
-function model_atomic(system::AbstractSystem; extra_terms=[], kwargs...)
-    @assert !(:terms  in keys(kwargs))
+function model_atomic(lattice::AbstractMatrix, atoms::Vector; extra_terms=[], kwargs...)
+    @assert !(:terms in keys(kwargs))
+    @assert !(:atoms in keys(kwargs))
     terms = [Kinetic(),
              AtomicLocal(),
              AtomicNonlocal(),
              Ewald(),
              PspCorrection(),
              extra_terms...]
-    if :temperature in keys(kwargs) && kwargs[:temperature] > 0
+    if :temperature in keys(kwargs) && kwargs[:temperature] != 0
         terms = [terms..., Entropy()]
     end
-    Model(system; model_name="atomic", terms=terms, kwargs...)
+    Model(lattice; model_name="atomic", atoms, terms, kwargs...)
+end
+function model_atomic(system::AbstractSystem; kwargs...)
+    parsed = parse_system(system)
+    model_atomic(parsed.lattice, parsed.atoms; parsed.kwargs..., kwargs...)
 end
 
 
 """
 Build a DFT model from the specified atoms, with the specified functionals.
 """
-function model_DFT(system::AbstractSystem, xc::Xc; extra_terms=[], kwargs...)
+function model_DFT(lattice::AbstractMatrix, atoms::Vector, xc::Xc; extra_terms=[], kwargs...)
     model_name = isempty(xc.functionals) ? "rHF" : join(xc.functionals, "+")
-    model_atomic(system; extra_terms=[Hartree(), xc, extra_terms...],
+    model_atomic(lattice, atoms; extra_terms=[Hartree(), xc, extra_terms...],
                  model_name, kwargs...)
 end
-function model_DFT(system::AbstractSystem, functionals; kwargs...)
-    model_DFT(system, Xc(functionals); kwargs...)
+function model_DFT(lattice::AbstractMatrix, atoms::Vector, functionals; kwargs...)
+    model_DFT(lattice, atoms, Xc(functionals); kwargs...)
+end
+function model_DFT(system::AbstractSystem, args...; kwargs...)
+    parsed = parse_system(system)
+    model_DFT(parsed.lattice, parsed.atoms, args...; parsed.kwargs..., kwargs...)
 end
 
 
-"""Build an LDA model (Teter93 parametrization)."""
-model_LDA(system::AbstractSystem; kwargs...) = model_DFT(system, :lda_xc_teter93; kwargs...)
-
-
-"""Build an PBE-GGA model."""
-model_PBE(system::AbstractSystem; kwargs...) = model_DFT(system, [:gga_x_pbe, :gga_c_pbe]; kwargs...)
-
-
-# TODO Temporary compatibility functions for old interface ...
-function system_from_atoms(lattice::AbstractMatrix, atoms::AbstractVector)
-    parsed_atoms = Atom[]
-    for (element, positions) in atoms
-        for pos in positions
-            atom = Atom(chemical_symbol(element),
-                        auconvert.(Ref(u"bohr"), lattice * pos),
-                        potential=element)
-            push!(parsed_atoms, atom)
-        end
-    end
-    periodic_system(parsed_atoms, collect(eachcol(lattice)) * u"bohr")
+"""
+Build an LDA model (Teter93 parametrization) from the specified atoms.
+"""
+function model_LDA(lattice::AbstractMatrix, atoms::Vector; kwargs...)
+    model_DFT(lattice, atoms, :lda_xc_teter93; kwargs...)
 end
-model_atomic(lattice::AbstractMatrix, atoms::AbstractVector, args...; kwargs...) =
-    model_atomic(system_from_atoms(lattice, atoms), args...; kwargs...)
-model_DFT(lattice::AbstractMatrix, atoms::AbstractVector, args...; kwargs...) =
-    model_DFT(system_from_atoms(lattice, atoms), args...; kwargs...)
-model_LDA(lattice::AbstractMatrix, atoms::AbstractVector, args...; kwargs...) =
-    model_LDA(system_from_atoms(lattice, atoms), args...; kwargs...)
-model_PBE(lattice::AbstractMatrix, atoms::AbstractVector, args...; kwargs...) =
-    model_PBE(system_from_atoms(lattice, atoms), args...; kwargs...)
+function model_LDA(system::AbstractSystem; kwargs...)
+    model_DFT(system, :lda_xc_teter93; kwargs...)
+end
+
+
+"""
+Build an PBE-GGA model from the specified atoms.
+"""
+function model_PBE(lattice::AbstractMatrix, atoms::Vector; kwargs...)
+    model_DFT(lattice, atoms, [:gga_x_pbe, :gga_c_pbe]; kwargs...)
+end
+function model_PBE(system::AbstractSystem; kwargs...)
+    model_DFT(system, [:gga_x_pbe, :gga_c_pbe]; kwargs...)
+end
