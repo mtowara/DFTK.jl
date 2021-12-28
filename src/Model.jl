@@ -77,6 +77,16 @@ function oldatoms_from_new(atomic_potentials, payload)
     new_potentials, new_payload
 end
 oldatoms_from_new(at) = first(oldatoms_from_new(at, at))
+
+old_to_new(atoms::AtomsType) = atoms
+function old_to_new(atoms::AbstractVector)
+    newatoms = []
+    for (el, positions) in atoms, pos in positions
+        push!(newatoms, el => pos)
+    end
+    Vector(newatoms)
+end
+
 # end for compatibility
 
 
