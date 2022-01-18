@@ -249,8 +249,8 @@ function parse_system(system::AbstractSystem{D}) where {D}
     lattice = zeros(T, 3, 3)
     lattice[1:D, 1:D] .= mtx
 
-    # Cache for instantiated pseudopotentials
-    # (such that the respective objects are indistinguishable)
+    # Cache for instantiated pseudopotentials (such that the respective objects are
+    # indistinguishable in memory. We need that property to fill potential_groups in Model)
     cached_pseudos = Dict{String,Any}()
     atoms = map(system) do atom
         if hasproperty(atom, :potential)
@@ -266,7 +266,7 @@ function parse_system(system::AbstractSystem{D}) where {D}
         end
 
         coordinate = zeros(T, 3)
-        coordinate[1:D] = lattice[1:D, 1:D] * T.(austrip.(position(atom)))
+        coordinate[1:D] = lattice[1:D, 1:D] \ T.(austrip.(position(atom)))
         potential => Vec3{T}(coordinate)
     end
 

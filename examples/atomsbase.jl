@@ -51,5 +51,5 @@ lattice = a / 2 * [[0 1 1.];
                    [1 1 0.]]
 Si    = ElementPsp(:Si, psp=load_psp("hgh/lda/si-q4.hgh"))
 atoms = [Si => [ones(3)/8, -ones(3)/8]]
-kin_4 = Model(lattice; atoms, terms=[Kinetic()])
+# kin_4 = Model(lattice; atoms, terms=[Kinetic()])
 lda_4 = model_LDA(lattice, atoms)
