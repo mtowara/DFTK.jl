@@ -72,8 +72,7 @@ function (χ0::DielectricModel)(basis; kwargs...)
 end
 
 """
-Full χ0 application, optionally dropping terms or disabling Sternheimer.
-All keyword arguments passed to [`apply_χ0`](@ref).
+Full χ0 application. All keyword arguments passed to [`apply_χ0`](@ref).
 """
 struct Applyχ0Model <: χ0Model
     kwargs_apply_χ0
