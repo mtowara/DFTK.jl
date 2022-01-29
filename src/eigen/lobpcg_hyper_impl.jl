@@ -169,7 +169,7 @@ function drop!(X, tol=2eps(real(eltype(X))))
 end
 
 # Find X that is orthogonal, and B-orthogonal to Y, up to a tolerance tol.
-function ortho!(X, Y, BY; tol=2eps(real(eltype(X))))
+@timing "ortho! X vs Y" function ortho!(X, Y, BY; tol=2eps(real(eltype(X))))
     T = real(eltype(X))
     # normalize to try to cheaply improve conditioning
     Threads.@threads for i=1:size(X,2)
@@ -212,9 +212,6 @@ function ortho!(X, Y, BY; tol=2eps(real(eltype(X))))
         niter += 1
     end
     vprintln("ortho choleskys: ", ninners) # get how many Choleskys are performed
-
-    # @assert (norm(BY'X)) < tol
-    # @assert (norm(X'X-I)) < tol
 
     X
 end
@@ -313,7 +310,9 @@ end
         end
 
         ### Compute new residuals
-        new_R = new_AX .- new_BX .* λs'
+        @timing "residual" begin
+            new_R = new_AX .- new_BX .* λs'
+        end
         # it is actually a good question of knowing when to
         # precondition. Here seems sensible, but it could plausibly be
         # done before or after
@@ -322,8 +321,10 @@ end
         end
         vprintln(niter, "   ", resid_history[:, niter+1])
         if precon !== I
-            precondprep!(precon, X) # update preconditioner if needed; defaults to noop
-            ldiv!(precon, new_R)
+            @timing "preconditioning" begin
+                precondprep!(precon, X) # update preconditioner if needed; defaults to noop
+                ldiv!(precon, new_R)
+            end
         end
 
         ### Compute number of locked vectors
