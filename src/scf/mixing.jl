@@ -248,8 +248,8 @@ end
     #       I also tried experimenting with some low-pass filtering in the LdosModel, but
     #       so far without a fully satisfactory result. As of now LdosMixing should be avoided
     #       with potential mixing.
-    @warn("LdosMixing / χ0Mixing not yet fine-tuned for potential mixing. " *
-          "Make sure use use sufficient k-Point sampling. Use at your own risk.", maxlog=1)
+    @warn("LdosMixing / χ0Mixing not yet fine-tuned for potential mixing. You're on your own. " *
+          "Make sure to use sufficient k-Point sampling and maybe low-pass filtering.", maxlog=1)
 
     # Solve ε δV = δF with ε = (1 - vc χ₀) and χ₀ given as the sum of the χ0terms
     devec(x) = reshape(x, size(δF))
