@@ -2,6 +2,7 @@
 
 using DFTK
 using LinearAlgebra
+using ForwardDiff
 using Zygote
 
 ## Construct PlaneWaveBasis given a particular electric field strength
@@ -19,13 +20,13 @@ function make_basis(ε::T; a=10., Ecut=5) where T  # too small Ecut, only for ef
     terms = [
         Kinetic(),
         AtomicLocal(),
-        # AtomicNonlocal(),  # more tricky, but eventually needed for reasonable physics
+        AtomicNonlocal(),
         Ewald(),
-        PspCorrection(),   # eventually interesting (psp parameters)
-        Entropy(),         # TODO check numerics with higher temperature and scf higher n_bands kwarg
+        PspCorrection(),
+        Entropy(),
         Hartree(),
         ExternalFromReal(r -> -ε * (r[1] - a/2)),
-        # XC
+        Xc([:lda_x, :lda_c_vwn])
     ]
     model = Model(lattice, atoms, positions; terms, symmetries=false)
     PlaneWaveBasis(model; Ecut, kgrid=[1, 1, 1])  # No k-point sampling on isolated system
@@ -48,23 +49,15 @@ end
 
 f = compute_dipole(0.0)
 
-# With this in place we can compute the polarizability from finite differences
-# (just like in the previous example):
 polarizability_fd = let
     ε = 0.001
     (compute_dipole(ε) - f) / ε
 end
-# 8.08068504649102    # 0.5 seconds (121.70 k allocations: 180.000 MiB)
 
-g = Zygote.gradient(compute_dipole, 0.0)
-# 8.084399146013764,
-# incl. compile time: 229 seconds
-# second call:          4 seconds (7.84 M allocations: 733.864 MiB, 25.31% gc time)
+g_forward = ForwardDiff.derivative(compute_dipole, 0.0)
+
+g_reverse = Zygote.gradient(compute_dipole, 0.0)
 
 
-println("f: ", f, " fd: ", polarizability_fd, " AD: ", g)
+println("f: ", f, " fd: ", polarizability_fd, " AD (forward): ", g_forward, " AD (reverse): ", g_reverse)
 
-# using Profile, PProf
-# Profile.clear()
-# @profile Zygote.gradient(compute_dipole, 0.0)
-# pprof()
